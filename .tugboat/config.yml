@@ -3,6 +3,8 @@ services:
     image: tugboatqa/php:8.1-apache
     default: true
     depends: mysql
+    environment:
+      DOCROOT: /var/www/html
     commands:
       init:
         - apt-get update
@@ -17,21 +19,21 @@ services:
         - chgrp -R www-data "${DOCROOT}/wp-content/uploads"
         - find "${DOCROOT}/wp-content/uploads" -type d -exec chmod 2775 {} \;
         - find "${DOCROOT}/wp-content/uploads" -type f -exec chmod 0664 {} \;
-        # Crear wp-config.php específico para Tugboat
+        # Create wp-config.php specific for Tugboat
         - cp ${DOCROOT}/wp-config-sample.php ${DOCROOT}/wp-config-tugboat.php
         - sed -i "s/database_name_here/tugboat/g" ${DOCROOT}/wp-config-tugboat.php
         - sed -i "s/username_here/tugboat/g" ${DOCROOT}/wp-config-tugboat.php
         - sed -i "s/password_here/tugboat/g" ${DOCROOT}/wp-config-tugboat.php
         - sed -i "s/localhost/mysql/g" ${DOCROOT}/wp-config-tugboat.php
-        # URLs dinámicas para Tugboat
+        # Dynamic URLs for Tugboat
         - echo "define('WP_HOME', 'https://' . \$_SERVER['HTTP_HOST']);" >> ${DOCROOT}/wp-config-tugboat.php
         - echo "define('WP_SITEURL', 'https://' . \$_SERVER['HTTP_HOST']);" >> ${DOCROOT}/wp-config-tugboat.php
-        # Reemplazar wp-config.php con la versión de Tugboat
+        # Replace wp-config.php with Tugboat version
         - mv ${DOCROOT}/wp-config-tugboat.php ${DOCROOT}/wp-config.php
       build:
-        # Importar base de datos si existe
-        - if [ -f "${TUGBOAT_ROOT}/database.sql" ]; then mysql --ssl-mode=DISABLED -h mysql -u tugboat -ptugboat tugboat < "${TUGBOAT_ROOT}/database.sql"; fi
-        # Instalar WordPress si no hay base de datos
+        # Import database if it exists
+        - if [ -f "${TUGBOAT_ROOT}/database.sql" ]; then mysql --ssl_mode=DISABLED -h mysql -u tugboat -ptugboat tugboat < "${TUGBOAT_ROOT}/database.sql"; fi
+        # Install WordPress if no database
         - wp core install --url="https://${TUGBOAT_SERVICE_URL_HOST}" --title="WordPress Site" --admin_user="admin" --admin_password="admin" --admin_email="admin@example.com" --skip-email || /bin/true
 
   mysql:
