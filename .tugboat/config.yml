@@ -8,9 +8,9 @@ services:
         - apt-get update
         - apt-get install -y libzip-dev
         - docker-php-ext-install mysqli zip
-        - curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-        - chmod +x wp-cli.phar
-        - mv wp-cli.phar /usr/local/bin/wp
+        - curl -sS -o /usr/local/bin/wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+        - chmod +x /usr/local/bin/wp
+        - printf "[client]\nssl-mode=DISABLED\n" > /root/.my.cnf
       update:
         - ln -snf "${TUGBOAT_ROOT}/web" "${DOCROOT}"
         - mkdir -p "${DOCROOT}/wp-content/uploads" || /bin/true
@@ -23,16 +23,14 @@ services:
         - sed -i "s/username_here/tugboat/g" ${DOCROOT}/wp-config-tugboat.php
         - sed -i "s/password_here/tugboat/g" ${DOCROOT}/wp-config-tugboat.php
         - sed -i "s/localhost/mysql/g" ${DOCROOT}/wp-config-tugboat.php
-        - sed -i "s/wp_/wp_/g" ${DOCROOT}/wp-config-tugboat.php
-        # Las claves ya están en wp-config-sample.php, no agregar más
-        # Agregar configuración de URLs dinámicas para Tugboat
+        # URLs dinámicas para Tugboat
         - echo "define('WP_HOME', 'https://' . \$_SERVER['HTTP_HOST']);" >> ${DOCROOT}/wp-config-tugboat.php
         - echo "define('WP_SITEURL', 'https://' . \$_SERVER['HTTP_HOST']);" >> ${DOCROOT}/wp-config-tugboat.php
         # Reemplazar wp-config.php con la versión de Tugboat
         - mv ${DOCROOT}/wp-config-tugboat.php ${DOCROOT}/wp-config.php
       build:
         # Importar base de datos si existe
-        - if [ -f "${TUGBOAT_ROOT}/database.sql" ]; then mysql -h mysql -u tugboat -ptugboat tugboat < ${TUGBOAT_ROOT}/database.sql; fi
+        - if [ -f "${TUGBOAT_ROOT}/database.sql" ]; then mysql --ssl-mode=DISABLED -h mysql -u tugboat -ptugboat tugboat < "${TUGBOAT_ROOT}/database.sql"; fi
         # Instalar WordPress si no hay base de datos
         - wp core install --url="https://${TUGBOAT_SERVICE_URL_HOST}" --title="WordPress Site" --admin_user="admin" --admin_password="admin" --admin_email="admin@example.com" --skip-email || /bin/true
 
